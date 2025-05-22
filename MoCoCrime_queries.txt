@@ -1,0 +1,118 @@
+USE moco_crime;
+
+/* query_takomapark (Provides information on crimes that occured in Takoma Park) */
+CREATE OR REPLACE VIEW query_takomapark AS
+SELECT start_date_time AS "Crime Started", 
+end_date_time AS "Crime Ended", 
+crime_name2 AS "Crime Name", 
+block_address AS "Address",
+zip_code AS "Zip Code",
+latitude AS "Latitude",
+longitude AS "Longitude"
+FROM Crime_Type JOIN Case_Report
+	USING (crime_type_id)
+JOIN Location
+	USING (location_id)
+WHERE zip_code IN
+	(SELECT zip_code 
+		FROM Zip_Code
+		WHERE city = "TAKOMA PARK")
+ORDER BY block_address DESC;
+
+/* query_rcpd (Provides information on crimes that the RCPD was dispatched to) */
+CREATE OR REPLACE VIEW query_rcpd AS
+SELECT agency_name AS "Police Agency", 
+district_name AS "District", 
+start_date_time AS "Crime Started", 
+end_date_time AS "Crime Ended", 
+block_address AS "Address",
+victims AS "Victim Count",
+latitude AS "Latitude",
+longitude AS "Longitude"
+FROM Agency JOIN Case_Report
+	USING (agency_id)
+JOIN Location
+	USING (location_id)
+JOIN Police_District
+	USING (district_id)
+WHERE agency_name = "RCPD"
+ORDER BY district_name;
+
+/* query_dv (Provides information on crimes that were deemed as drug/narcotic violations) */
+CREATE OR REPLACE VIEW query_dv AS
+SELECT crime_name2 AS "Crime Name", 
+start_date_time AS "Crime Occurred",
+end_date_time AS "Crime Ended",
+block_address AS "Address", 
+victims AS "Victims",
+zip_code AS "Zip Code", 
+city AS "City",
+latitude AS "Latitude",
+longitude AS "Longitude"
+FROM Crime_Type JOIN Case_Report
+	USING (crime_type_id)
+JOIN Location 
+	USING (location_id)
+JOIN Zip_Code
+	USING (zip_code)
+WHERE crime_name2 = "Drug/Narcotic Violations";
+
+/* query_cas (Provides information on crimes that were deemed as a crime against society) */
+CREATE OR REPLACE VIEW query_cas AS
+SELECT crime_name1 AS "Crime Name", 
+block_address AS "Address", 
+zip_code AS "Zip Code", 
+city AS "City",
+latitude AS "Latitude",
+longitude AS "Longitude"
+FROM Crime_Type JOIN Case_Report
+	USING (crime_type_id)
+JOIN Location
+	USING (location_id)
+JOIN Zip_Code
+	USING (zip_code)
+WHERE crime_name1 = "Crime Against Society";
+
+/* query_citycount (Determines the number of crimes that were recorded in different MoCo 
+cities) */
+CREATE OR REPLACE VIEW query_citycount AS
+SELECT city AS "MoCo City Name", 
+COUNT(city) AS "Number Of Crimes Recorded"
+FROM Zip_code
+GROUP BY city
+ORDER BY COUNT(city) DESC;
+
+/* query_crimenamecount (Determines the number of occurences of a specific crime and shows 
+crime names with more than one occurence in MoCo) */
+CREATE OR REPLACE VIEW query_crimenamecount AS
+SELECT crime_name2 AS "Crime Name", 
+COUNT(crime_name2) AS "Occurences"
+FROM Crime_Type JOIN Case_Report
+	USING (crime_type_id)
+GROUP BY crime_name2
+HAVING COUNT(crime_name2) > 1
+ORDER BY COUNT(crime_name2) DESC;
+
+/* query_addresscount (Determines the number of crimes that occurred at a specific address in MoCo and 
+only shows addresses that had more than one crime take place) */
+CREATE OR REPLACE VIEW query_addresscount AS
+SELECT block_address AS "Address", 
+COUNT(block_address) AS "Incidents" 
+FROM Location JOIN Case_Report
+	USING (location_id)
+GROUP BY block_address
+HAVING COUNT(block_address) > 1
+ORDER BY COUNT(block_address) DESC;
+
+/* fulfills requirement D */ 
+CREATE OR REPLACE VIEW query_offense_linked AS
+SELECT cr.case_id, cr.start_date_time, cr.end_date_time,
+       co.offense_code, oc.offense_code AS code_check,
+       ct.crime_name3
+FROM Case_Report cr
+JOIN Case_Offense co ON cr.case_id = co.case_id
+JOIN Offense_Code oc ON co.offense_code = oc.offense_code
+JOIN Crime_Type ct ON cr.crime_type_id = ct.crime_type_id
+ORDER BY cr.case_id;
+
+
